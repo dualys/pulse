@@ -1,65 +1,61 @@
-// Dans votre fichier : src/main.rs
+// In your file: src/main.rs
 
 use std::{thread, time};
 
-mod wave;
+mod computation_result;
+mod physics;
 mod substrat;
+mod wave;
 
-use wave::Wave;
+use physics::PhysicsEngine;
 use substrat::Substrat;
+use crate::wave::Wave;
 
 fn main() {
+    // ... (initialization code is the same)
     println!("--- [PULSE CORE] : Initialisation du Substrat ---");
     let _univers = Substrat::new(100, 100, 100);
-    println!("--- [SUBSTRAT] : Espace-temps créé.");
+
+    let mut engine = PhysicsEngine::new(1.0);
 
     let mut plan_a = Wave::new();
-    println!("--- [GENÈSE] : Vague A créée. ID: {}", plan_a.id);
+    plan_a.position.x = -10.0;
+    plan_a.frequency = 440.0; // Give it a property
 
-    // Nous devons pouvoir stocker la Vague B quand elle sera créée.
-    let mut plan_b: Option<Wave> = None;
+    let mut plan_b = plan_a.conjugate();
+    plan_b.position.x = 10.0;
+    plan_b.frequency = 880.0; // Give it a different property
 
-    println!("\n--- [PULSE CORE] : Démarrage de la boucle de simulation temporelle ---");
+    engine.add_wave(plan_a);
+    engine.add_wave(plan_b);
 
-    let time_step = 1.0;
+    println!("\n--- [PULSE CORE] : Démarrage de la boucle de simulation ---");
     let mut tick_count = 0;
-
     loop {
-        // --- MOTEUR PHYSIQUE ---
-        // Fait avancer la Vague A
-        plan_a.propagate(time_step);
+        tick_count += 1;
+        println!("\n--- [TICK {}] ---", tick_count);
 
-        // Fait avancer la Vague B si elle existe
-        if let Some(plan) = &mut plan_b {
-            plan.propagate(time_step);
+        if engine.waves.is_empty() {
+            println!("--- [SILENCE] : Univers vide. ---");
+            break;
         }
 
-        tick_count += 1;
+        // --- NOUVELLE LOGIQUE : CAPTURER LE RÉSULTAT ---
+        if let Some(result) = engine.step() {
+            println!("--- [RÉSULTAT DE CALCUL] : Un résultat a été généré ! ---");
+            println!("  ID      : {}", result.id);
+            println!("  Valeur  : '{}'", result.value);
+            println!("  Énergie : {}", result.energy_released);
+        }
 
-        // --- AFFICHAGE DE L'ÉTAT ---
-        println!("[Tick: {}] Vague A @ ({:.1}, {:.1}, {:.1})",
-                 tick_count,
-                 plan_a.position.x,
-                 plan_a.position.y,
-                 plan_a.position.z
-        );
-
-        if let Some(plan) = &plan_b {
-            println!("[Tick: {}] Vague B @ ({:.1}, {:.1}, {:.1})",
-                     tick_count,
-                     plan.position.x,
-                     plan.position.y,
-                     plan.position.z
+        // ... (display logic for waves is the same)
+        for wave in &engine.waves {
+            println!(
+                "Onde {} @ ({:.1}, {:.1}, {:.1})",
+                wave.id, wave.position.x, wave.position.y, wave.position.z
             );
         }
 
-        // --- ÉVÉNEMENT DE CLONAGE ---
-        // Au 5ème tick, on déclenche le clonage.
-        if tick_count == 5 && plan_b.is_none() {
-            plan_b = Some(plan_a.conjugate());
-        }
-
         thread::sleep(time::Duration::from_millis(500));
-        println!("--------------------------------------------------");
     }
 }
