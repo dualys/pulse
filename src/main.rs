@@ -1,148 +1,65 @@
-use random_number::rand::random;
-use std::{thread::sleep, time::Duration};
+// Dans votre fichier : src/main.rs
 
-#[derive(Debug, Clone)]
-pub enum Event {
-    Wakeup,
-    Inspire,
-    Contract,
-    Expire,
-    Rest,
-    Awake,
-}
+use std::{thread, time};
 
-#[derive(Debug, Clone)]
-pub enum Etat {
-    Inconscient,
-    Eveiller,
-    Conscient,
-    Veille,
-    Calme,
-    Endormit,
-    Running,
-}
+mod wave;
+mod substrat;
 
-#[derive(Debug, Clone)]
-pub enum Emotion {
-    Fatigue,
-    Eveil,
-    Pression,
-    Joie,
-    Surcharge,
-    Vide,
-    Soulagement,
-}
-
-impl Emotion {
-    pub fn pause_range(self) -> (u64, u64) {
-        match self {
-            Emotion::Fatigue => (20_000_000, 60_000_000),
-            Emotion::Eveil => (5_000_000, 15_000_000),
-            Emotion::Pression => (2_000_000, 6_000_000),
-            Emotion::Joie => (3_000_000, 12_000_000),
-            Emotion::Surcharge => (1_000_000, 3_000_000),
-            Emotion::Vide => (30_000_000, 80_000_000),
-            Emotion::Soulagement => (10_000_000, 25_000_000),
-        }
-    }
-}
-pub struct PulseMemory {
-    events: Vec<Event>,   // derniers événements perçus
-    signals: Vec<String>, // signaux ou intentions
-    tempo: Vec<u32>,      // historique du rythme
-}
-
-pub struct SignalBus {} // canal de communication
-pub struct PlanShell {} // interface d’un plan
-pub struct CompilerCell {} // cellules de compilation
-pub struct PulseEnergy {} // énergie globale
-pub struct EventMatrix {} // déclencheurs/réactions
-
-pub struct Pulse {
-    bpm: u32,
-    memory: PulseMemory,
-}
-
-impl Pulse {
-    pub fn wakeup() -> Self {
-        Self {
-            bpm: 60,
-            memory: PulseMemory {
-                events: vec![],
-                signals: vec![],
-                tempo: vec![],
-            },
-        }
-    }
-
-    pub fn awake(&mut self) -> Emotion {
-        self.record(Event::Awake);
-        Emotion::Fatigue
-    }
-
-    pub fn inspire(&mut self) -> Emotion {
-        println!("inspire");
-        self.record(Event::Inspire);
-        Emotion::Eveil
-    }
-
-    pub fn contract(&mut self) -> Emotion {
-        println!("contract");
-        self.record(Event::Contract);
-        Emotion::Pression
-    }
-
-    pub fn emit(&mut self, message: &str) {
-        println!("emit");
-        self.memory.events.push(Event::Contract);
-        self.memory.signals.push(message.to_string());
-    }
-
-    pub fn expire(&mut self) -> Emotion {
-        println!("expire");
-        self.record(Event::Expire);
-        Emotion::Soulagement
-    }
-
-    pub fn rest(&mut self) -> Emotion {
-        println!("rest");
-        Emotion::Vide
-    }
-
-    fn record(&mut self, e: Event) {
-        self.memory.events.push(e.clone());
-        self.memory.tempo.push(self.bpm);
-    }
-
-    fn pause(&self, emotion: Emotion) {
-        let (min, max) = emotion.pause_range();
-        let range = max - min;
-        let rand_offset: u64 = random::<u64>() % range;
-        let duration = min + rand_offset;
-        sleep(Duration::from_nanos(duration));
-    }
-
-    pub fn beat(&mut self) {
-        let e1: Emotion = self.inspire();
-        self.pause(e1);
-
-        let e2: Emotion = self.contract();
-        self.pause(e2);
-
-        self.emit("Signal vers plan dev");
-
-        let e3: Emotion = self.expire();
-        self.pause(e3);
-
-        let e4: Emotion = self.rest();
-        self.pause(e4);
-    }
-}
+use wave::Wave;
+use substrat::Substrat;
 
 fn main() {
-    let mut pulse: Pulse = Pulse::wakeup();
+    println!("--- [PULSE CORE] : Initialisation du Substrat ---");
+    let _univers = Substrat::new(100, 100, 100);
+    println!("--- [SUBSTRAT] : Espace-temps créé.");
+
+    let mut plan_a = Wave::new();
+    println!("--- [GENÈSE] : Vague A créée. ID: {}", plan_a.id);
+
+    // Nous devons pouvoir stocker la Vague B quand elle sera créée.
+    let mut plan_b: Option<Wave> = None;
+
+    println!("\n--- [PULSE CORE] : Démarrage de la boucle de simulation temporelle ---");
+
+    let time_step = 1.0;
+    let mut tick_count = 0;
+
     loop {
-        pulse.awake();
-        pulse.beat();
+        // --- MOTEUR PHYSIQUE ---
+        // Fait avancer la Vague A
+        plan_a.propagate(time_step);
+
+        // Fait avancer la Vague B si elle existe
+        if let Some(plan) = &mut plan_b {
+            plan.propagate(time_step);
+        }
+
+        tick_count += 1;
+
+        // --- AFFICHAGE DE L'ÉTAT ---
+        println!("[Tick: {}] Vague A @ ({:.1}, {:.1}, {:.1})",
+                 tick_count,
+                 plan_a.position.x,
+                 plan_a.position.y,
+                 plan_a.position.z
+        );
+
+        if let Some(plan) = &plan_b {
+            println!("[Tick: {}] Vague B @ ({:.1}, {:.1}, {:.1})",
+                     tick_count,
+                     plan.position.x,
+                     plan.position.y,
+                     plan.position.z
+            );
+        }
+
+        // --- ÉVÉNEMENT DE CLONAGE ---
+        // Au 5ème tick, on déclenche le clonage.
+        if tick_count == 5 && plan_b.is_none() {
+            plan_b = Some(plan_a.conjugate());
+        }
+
+        thread::sleep(time::Duration::from_millis(500));
+        println!("--------------------------------------------------");
     }
 }
